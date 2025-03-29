@@ -5,7 +5,7 @@ import spacy
 import math
 import json
 
-from urllib.parse import quote
+from urllib.parse import urlparse, parse_qs, quote
 
 sys.stdout.reconfigure(encoding='utf-8')
 
