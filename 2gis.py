@@ -7,7 +7,7 @@ import spacy
 
 import json
 
-from urllib.parse import quote
+from urllib.parse import urlparse, parse_qs, quote
 
 sys.stdout.reconfigure(encoding='utf-8')
 
@@ -94,7 +94,7 @@ def get_2gis_id(url):
 
 def get_2gis_data(api_key, id):
 
-  url = f"https://catalog.api.2gis.com/3.0/items/byid?id={id}&key={api_key}&fields=items.full_address_name,items.rubrics,items.point"
+  url = f"https://catalog.api.2gis.com/3.0/items/byid?id={id}&key={api_key}&fields=items.full_address_name,items.rubrics,items.point,items.statistic"
 
   response = requests.get(url).json()
   return response
@@ -107,10 +107,15 @@ def extract_2gis_id(api_key, link):
   response = requests.get(url).json()
   return response
 
+def extract_2gis_rubric(location, text):
+	url = f"https://catalog.api.2gis.com/3.0/items?q={text}&location={location}&page_size=5&key=49caba50-28ff-41b0-9268-0ff6e43bdc31&fields=items.rubrics"
+
+	response = requests.get(url).json()
+	return response["result"]["items"][0]["rubrics"][0]["name"]
 
 def get_2gis_near(location, text):
 
-  url = f"https://catalog.api.2gis.com/3.0/items?q={text}&location={location}&page_size=5&key=49caba50-28ff-41b0-9268-0ff6e43bdc31&fields=items.rubrics,items.external_content&sort=relevance"
+  url = f"https://catalog.api.2gis.com/3.0/items?q={text}&location={location}&page_size=5&key=49caba50-28ff-41b0-9268-0ff6e43bdc31&fields=items.external_content,items.reviews&sort=relevance"
 
   response = requests.get(url).json()
 
@@ -141,18 +146,36 @@ text = response["result"]["items"][0]["rubrics"][0]["name"]
 
 response = get_2gis_near(location, text)
 
-for res in response["result"]["items"]:
-  print(res)
+# for res in response["result"]["items"]:
+#   print(res)
 
-  print("-"*40)
+#   print("-"*40)
 
 
 
-# url = "https://geocode-maps.yandex.ru/v1/?apikey=b156e65d-f8cb-45a1-8f83-3f613e7710e0&geocode=икариум краснодар&format=json"
+# Реализация перехода из яндекса --> 2гис --------------------------
 
-# response = requests.get(url).json()
+def parse_yandex_maps_url(yandex_url):
+    try:
+        org_name = urlparse(yandex_url).path.split('/org/')[1].split('/')[0]
+        
+        parsed = urlparse(yandex_url)
+        params = parse_qs(parsed.query)
+        ll = params.get('ll', [None])[0]    
+        return {
+            "name": org_name.replace('_', ' '),
+            "geo": quote(ll)
+        }
+    
+    except Exception as ex:
+        print(f"Ошибка парсинга URL Яндекс.Карт: {ex}")
+        return None
 
-# print(response)
+
+parsed_yandex = parse_yandex_maps_url("https://yandex.ru/maps/org/akvarium/173408900265/?ll=38.995723%2C45.037458")
+if parsed_yandex:
+    print(get_2gis_near(parsed_yandex["geo"], extract_2gis_rubric(parsed_yandex["geo"], parsed_yandex["name"])))
+
 
 
 
