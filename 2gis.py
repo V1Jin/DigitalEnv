@@ -4,11 +4,34 @@ import re
 import spacy
 import math
 import json
-
+from web import queryLinks
 from urllib.parse import urlparse, parse_qs, quote
 
 sys.stdout.reconfigure(encoding='utf-8')
 
+
+#--------------------------------------------------------------------------------------------------------------
+                                                #SPACY
+# Загрузка модели
+
+
+nlp = spacy.load("ru_core_news_md")
+
+# Текст для анализа
+g = "Я модель машинного обучения"
+
+# Обработка текста
+doc = nlp(g)
+
+# Печать распознанных сущностей
+for ent in doc.ents:
+    print(ent.text, ent.label_)
+
+# Печать всего документа
+print(doc.ents)
+
+
+#--------------------------------------------------------------------------------------------------------------
 feedbackCount = 5
 
 headers = {
@@ -189,6 +212,9 @@ def get_2gis_near(location, text,page):
             if j in Srubricks: rubricks_ratio += 1
         sizeRatio = abs(branches-dist_lonLat[0]) + 1
         ratio = (rates[1] * rates[0] + (1/distance)*0.5 + rubricks_ratio + 1/sizeRatio)
+        links = queryLinks(i["name"]+" Вконтакте")
+        links += queryLinks(i["name"]+" Телеграмм")
+        print(links)
         data = {
                         "id": i["id"],
                         "name": i["name"],
@@ -198,7 +224,9 @@ def get_2gis_near(location, text,page):
                         "distance": distance,
                         "rubricks": [x["name"] for x in i["rubrics"]],
                         "size": dist_lonLat[0],
-                        "ratio": ratio
+                        "ratio": ratio,
+                        "selfLink": link,
+                        "links": links
                     }
         fullData.append(data)
 
@@ -227,7 +255,12 @@ def getSizeDistance(id):
 
     response = requests.get(url).json()
 
-    return [response["result"]["items"][0]["org"]["branch_count"], response["result"]["items"][0]["point"]]
+    query = response["result"]["items"][0]["org"]["name"]
+    
+
+
+
+    return [response["result"]["items"][0]["org"]["branch_count"], response["result"]["items"][0]["point"], []]
 
 def AllResponse(location, text, pages):
     data = []
